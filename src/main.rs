@@ -10,6 +10,8 @@ use clap::{arg, command, value_parser};
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<()> {
+    pretty_env_logger::init();
+
     let matches = command!() // requires `cargo` feature
         .arg(
             arg!(

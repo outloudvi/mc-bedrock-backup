@@ -1,7 +1,6 @@
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::Path;
-use std::process::Command;
 
 use anyhow::{anyhow, Result};
 
@@ -30,11 +29,5 @@ pub(crate) fn write_to_fifo(path: &str, command: &str) -> Result<()> {
     let mut file = OpenOptions::new().write(true).open(path).unwrap();
     file.write_all(command.as_bytes()).unwrap();
     file.flush()?;
-    // file.sync_data().unwrap();
     Ok(())
-    // let mut args = Vec::<String>::new();
-    // args.push("-c".to_owned());
-    // args.push(format!("echo '{}' > '{}'", command, path));
-    // Command::new("sh").args(args).output()?;
-    // Ok(())
 }
