@@ -1,15 +1,13 @@
-mod backup;
-mod constants;
-mod seeker;
-mod utils;
-
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use clap::{arg, command, value_parser};
+use mc_bedrock_tools::utils;
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<()> {
+    use mc_bedrock_tools::backup;
+
     pretty_env_logger::init();
 
     let matches = command!() // requires `cargo` feature

@@ -14,7 +14,7 @@ struct SaveFile {
     size: u64,
 }
 
-pub(crate) fn backup(
+pub fn backup(
     pipe_file_path: &PathBuf,
     log_file_path: &PathBuf,
     output_file_path: &PathBuf,
