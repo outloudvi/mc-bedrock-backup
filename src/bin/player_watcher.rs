@@ -22,9 +22,8 @@ fn main() -> Result<()> {
     use std::thread;
     use std::time::Duration;
 
-    use log::error;
-    use mc_bedrock_tools::telegram::{self, send_message};
-    use mc_bedrock_tools::{seeker, utils};
+    use log::{debug, error, info};
+    use mc_bedrock_tools::{seeker, telegram, utils};
 
     pretty_env_logger::init();
 
@@ -33,15 +32,28 @@ fn main() -> Result<()> {
     let chat_id = args.chat_id;
     let bot_token = args.bot_token;
 
-    let mut log_file = File::open(log_file_path)?;
+    let mut log_file = File::open(&log_file_path)?;
+    info!("Reading log file {:?}", log_file_path);
+    info!("Target Telegram chat ID: {}", chat_id);
     seeker::seek_to_end(&mut log_file)?;
 
     let mut str = String::new();
     loop {
         str.clear();
         seeker::read_to_end(&mut log_file, &mut str)?;
+        if (!str.is_empty()) {
+            debug!("Checking lines: {}", str);
+        }
         let results = utils::find_user_state_change(&str);
         for i in results {
+            info!(
+                "{} {} the game.",
+                i.username,
+                match i.state {
+                    utils::StateChange::Connected => "joined",
+                    utils::StateChange::Disconnected => "left",
+                }
+            );
             let _ = telegram::send_message(
                 &bot_token,
                 &chat_id,
