@@ -9,12 +9,17 @@ use regex::{Regex, RegexBuilder};
 use crate::constants::LOCKFILE_PATH;
 
 lazy_static! {
-    static ref USER_STATUS_REGEX: Regex = RegexBuilder::new(
+    static ref USER_STATUS_REGEX_BEDROCK: Regex = RegexBuilder::new(
         r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:\d{3} INFO\] Player (dis|)connected: ([^,]+),",
     )
     .multi_line(true)
     .build()
     .unwrap();
+    static ref USER_STATUS_REGEX_JAVA: Regex =
+        RegexBuilder::new(r"^\[\d{2}:\d{2}:\d{2} INFO\]: (\w+) (joined|left) the game",)
+            .multi_line(true)
+            .build()
+            .unwrap();
 }
 
 pub fn check_lockfile() -> Result<()> {
@@ -55,9 +60,12 @@ pub struct UserStateChange {
     pub state: StateChange,
 }
 
-pub fn find_user_state_change(lines: &str) -> Vec<UserStateChange> {
+pub fn find_user_state_change_bedrock(lines: &str) -> Vec<UserStateChange> {
     let mut ret = Vec::new();
-    for (_, [state, username]) in USER_STATUS_REGEX.captures_iter(lines).map(|c| c.extract()) {
+    for (_, [state, username]) in USER_STATUS_REGEX_BEDROCK
+        .captures_iter(lines)
+        .map(|c| c.extract())
+    {
         ret.push(UserStateChange {
             username: username.to_string(),
             state: if state.is_empty() {
@@ -70,12 +78,30 @@ pub fn find_user_state_change(lines: &str) -> Vec<UserStateChange> {
     ret
 }
 
+pub fn find_user_state_change_java(lines: &str) -> Vec<UserStateChange> {
+    let mut ret = Vec::new();
+    for (_, [username, state]) in USER_STATUS_REGEX_JAVA
+        .captures_iter(lines)
+        .map(|c| c.extract())
+    {
+        ret.push(UserStateChange {
+            username: username.to_string(),
+            state: if state == "joined" {
+                StateChange::Connected
+            } else {
+                StateChange::Disconnected
+            },
+        });
+    }
+    ret
+}
+
 #[cfg(test)]
-mod test {
-    use super::{find_user_state_change as f, StateChange, UserStateChange};
+mod test_bedrock {
+    use super::{find_user_state_change_bedrock as f, StateChange, UserStateChange};
 
     #[test]
-    fn test_one() {
+    fn test_bedrock_one() {
         let a = f(
             "[2023-10-16 21:23:07:321 INFO] Player connected: Test1234, xuid: abc123, pfid: 12abc",
         );
@@ -102,7 +128,7 @@ mod test {
     }
 
     #[test]
-    fn test_utf8_name() {
+    fn test_bedrock_utf8_name() {
         let a = f(
             "[2023-10-16 21:23:07:321 INFO] Player connected: 钟岚珠, xuid: abc123, pfid: 12abc",
         );
@@ -117,7 +143,7 @@ mod test {
     }
 
     #[test]
-    fn test_multi() {
+    fn test_bedrock_multi() {
         let a = f(
             "[2023-10-16 21:23:07:321 INFO] Player connected: Test1234, xuid: 2535454618798386
 [2023-10-16 22:02:35:102 INFO] Player disconnected: Test1234, xuid: 1234abcd, pfid: abcd1234",
@@ -128,6 +154,35 @@ mod test {
             UserStateChange {
                 username: "Test1234".to_string(),
                 state: StateChange::Connected
+            }
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_java {
+
+    use super::{find_user_state_change_java as f, StateChange, UserStateChange};
+
+    #[test]
+    fn test_java_one() {
+        let a = f("[23:07:02 INFO]: Test1234 joined the game");
+        assert_eq!(a.len(), 1);
+        assert_eq!(
+            a[0],
+            UserStateChange {
+                username: "Test1234".to_string(),
+                state: StateChange::Connected
+            }
+        );
+
+        let a = f("[23:07:02 INFO]: Test1234 left the game");
+        assert_eq!(a.len(), 1);
+        assert_eq!(
+            a[0],
+            UserStateChange {
+                username: "Test1234".to_string(),
+                state: StateChange::Disconnected
             }
         );
     }

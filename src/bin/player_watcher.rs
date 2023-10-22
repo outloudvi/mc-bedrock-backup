@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{command, Parser};
+use clap::{command, Parser, ValueEnum};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -14,6 +14,9 @@ struct Args {
 
     #[arg(short = 'b', long)]
     bot_token: String,
+
+    #[arg(long)]
+    mode: mc_bedrock_tools::types::EngineMode,
 }
 
 #[cfg(target_os = "linux")]
@@ -44,7 +47,7 @@ fn main() -> Result<()> {
         if (!str.is_empty()) {
             debug!("Checking lines: {}", str);
         }
-        let results = utils::find_user_state_change(&str);
+        let results = utils::find_user_state_change_java(&str);
         for i in results {
             info!(
                 "{} {} the game.",
