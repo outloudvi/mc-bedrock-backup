@@ -1,6 +1,6 @@
 use clap::ValueEnum;
 
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(PartialEq, ValueEnum, Clone, Debug)]
 pub enum EngineMode {
     Bedrock,
     Java,

@@ -1,64 +1,57 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use clap::{arg, command, value_parser};
-use mc_bedrock_tools::utils;
+use clap::{command, Parser};
+use mc_bedrock_tools::types::EngineMode;
+use mc_bedrock_tools::{backup, utils};
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Minecraft server input FIFO file path
+    #[arg(short, long)]
+    pipe_file: PathBuf,
+
+    /// Log file path
+    #[arg(short, long)]
+    log_file: PathBuf,
+
+    /// Output file path
+    #[arg(short, long)]
+    output_file: PathBuf,
+
+    /// The worlds directory
+    #[arg(short, long)]
+    world_dir: Vec<PathBuf>,
+
+    /// Engine mode
+    #[arg(long)]
+    mode: EngineMode,
+}
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<()> {
-    use mc_bedrock_tools::backup;
-
     pretty_env_logger::init();
 
-    let matches = command!() // requires `cargo` feature
-        .arg(
-            arg!(
-                -p --pipefile <FILE> "Sets the Minecraft server input FIFO file path"
-            )
-            .required(true)
-            .value_parser(value_parser!(PathBuf)),
-        )
-        .arg(
-            arg!(
-                -l --logfile <FILE> "Sets the log file path"
-            )
-            .required(true)
-            .value_parser(value_parser!(PathBuf)),
-        )
-        .arg(
-            arg!(
-                -o --outputfile <FILE> "Set the output file path"
-            )
-            .default_value("level.tar")
-            .value_parser(value_parser!(PathBuf)),
-        )
-        .arg(
-            arg!(
-                -w --worlds <DIR> "Set the worlds directory"
-            )
-            .required(true)
-            .value_parser(value_parser!(PathBuf)),
-        )
-        .get_matches();
+    let args = Args::parse();
 
-    let pipe_file = matches
-        .get_one::<PathBuf>("pipefile")
-        .ok_or(anyhow!("Invalid pipe file path"))?;
-    let log_file = matches
-        .get_one::<PathBuf>("logfile")
-        .ok_or(anyhow!("Invalid log file path"))?;
-    let output_file = matches
-        .get_one::<PathBuf>("outputfile")
-        .ok_or(anyhow!("Invalid output file path"))?;
-    let worlds_dir = matches
-        .get_one::<PathBuf>("worlds")
-        .ok_or(anyhow!("Invalid worlds dir path"))?;
+    let pipe_file = args.pipe_file;
+    let log_file = args.log_file;
+    let output_file = args.output_file;
+    let worlds_dirs = args.world_dir;
+    let mode = args.mode;
+
+    if mode == EngineMode::Bedrock && worlds_dirs.len() > 1 {
+        return Err(anyhow!(
+            "Bedrock Minecraft should only have one world directory."
+        ));
+    }
 
     // Pre-check
     utils::check_lockfile()?;
 
     // let r =
-    backup::backup(pipe_file, log_file, output_file, worlds_dir).unwrap();
+    backup::backup(&pipe_file, &log_file, &output_file, &worlds_dirs, mode).unwrap();
 
     // Cleanup
     utils::remove_lockfile()?;
