@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{command, Parser, ValueEnum};
+use clap::{command, Parser};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -20,6 +20,7 @@ struct Args {
 }
 
 #[cfg(target_os = "linux")]
+#[allow(unreachable_code)]
 fn main() -> Result<()> {
     use std::fs::File;
     use std::thread;
@@ -41,10 +42,11 @@ fn main() -> Result<()> {
     seeker::seek_to_end(&mut log_file)?;
 
     let mut str = String::new();
+
     loop {
         str.clear();
         seeker::read_to_end(&mut log_file, &mut str)?;
-        if (!str.is_empty()) {
+        if !str.is_empty() {
             debug!("Checking lines: {}", str);
         }
         let results = utils::find_user_state_change_java(&str);
